@@ -7,6 +7,12 @@ export const HEIGHT = 75;
 export const STATUS_ROWS = 10;
 export const CONTENT_ROWS = 63;
 
+// The CW display has four dot levels; screens mostly draw black. Grey is used by icons and scroll bars.
+export const BLACK = 3;
+const LEVEL = { '+': 1, d: 2, '#': 3 };
+// ink strength of each level (measured from CASIO's screen images: light grey 45 %, dark grey 80 %)
+const LEVEL_ALPHA = [0, 0.45, 0.8, 1];
+
 const parse = (rows) => rows.split('|');
 const cache = new Map();
 
@@ -87,9 +93,14 @@ export class LCD {
     return x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT ? this.bits[y * WIDTH + x] : 0;
   }
 
-  /** Sets an absolute pixel. */
+  /** Sets an absolute pixel (on: black, off: clear). */
   put(x, y, on = 1) {
-    if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) this.bits[y * WIDTH + x] = on ? 1 : 0;
+    if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) this.bits[y * WIDTH + x] = on ? BLACK : 0;
+  }
+
+  /** Sets an absolute pixel to a dot level: 0 clear, 1 light grey, 2 dark grey, 3 black. */
+  shade(x, y, level) {
+    if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) this.bits[y * WIDTH + x] = level;
   }
 
   // ------------------------------------------------------------ content-coordinate drawing
@@ -103,11 +114,12 @@ export class LCD {
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) this.dot(x + i, y + j, on);
   }
 
+  /** Inverts a box: black and clear swap, as do dark and light grey. */
   invert(x, y, w, h) {
     for (let j = 0; j < h; j++) {
       for (let i = 0; i < w; i++) {
         const yy = y + j + this.oy;
-        if (yy >= this.oy && yy < this.oy + CONTENT_ROWS) this.put(x + i, yy, !this.get(x + i, yy));
+        if (yy >= this.oy && yy < this.oy + CONTENT_ROWS) this.shade(x + i, yy, BLACK - this.get(x + i, yy));
       }
     }
   }
@@ -123,9 +135,21 @@ export class LCD {
     this.vline(x + w - 1, y, y + h - 1);
   }
 
-  /** Draws pixel rows ('#' set) with the top-left corner at (x, y). */
+  /** Draws pixel rows with the top-left corner at (x, y): '#' set (or cleared when on is 0), 'd' and '+' grey. */
   bitmap(rows, x, y, on = 1) {
-    rows.forEach((r, j) => { for (let i = 0; i < r.length; i++) if (r[i] === '#') this.dot(x + i, y + j, on); });
+    rows.forEach((r, j) => {
+      for (let i = 0; i < r.length; i++) {
+        const c = r[i];
+        if (c === '#') this.dot(x + i, y + j, on);
+        else if (on && LEVEL[c]) this.shadeDot(x + i, y + j, LEVEL[c]);
+      }
+    });
+  }
+
+  /** A grey (or any level) dot in content coordinates. */
+  shadeDot(x, y, level) {
+    const yy = y + this.oy;
+    if (yy >= this.oy && yy < this.oy + CONTENT_ROWS) this.shade(x, yy, level);
   }
 
   /** One glyph in the cell starting at x; base is the baseline row. Returns the cell advance. */
@@ -227,9 +251,13 @@ export function textWidth(text, font = 'L') {
   return chars(text).reduce((w, ch) => w + advance(ch, font), 0);
 }
 
+let sharp = null; // offscreen canvas, made on first use (this module also loads outside a browser)
+
 /**
- * Paints the buffer onto a canvas as solid pixels. The canvas is sized to the device pixels it covers and
- * each LCD pixel fills its whole cell, so neighbouring pixels join without gaps (as on the real display).
+ * Paints the buffer onto a canvas. The dots are first drawn at a whole multiple of the LCD resolution, then
+ * scaled to the device pixels the canvas covers with smoothing. Every dot comes out the same size, however
+ * the window is zoomed (rounding each dot to device pixels made some dots wider than others and the text
+ * looked ragged). Neighbouring dots join without gaps, as on the real display.
  */
 export function present(lcd, canvas, ink = 'rgba(20, 22, 18, 0.92)') {
   const r = canvas.getBoundingClientRect();
@@ -237,19 +265,32 @@ export function present(lcd, canvas, ink = 'rgba(20, 22, 18, 0.92)') {
   const W = Math.max(WIDTH, Math.round(r.width * dpr));
   const H = Math.max(HEIGHT, Math.round(r.height * dpr));
   if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = ink;
-  const xs = (x) => Math.round((x * W) / WIDTH);
-  const ys = (y) => Math.round((y * H) / HEIGHT);
-  for (let y = 0; y < HEIGHT; y++) {
-    const y0 = ys(y), h = ys(y + 1) - y0;
-    for (let x = 0; x < WIDTH; x++) {
-      if (!lcd.bits[y * WIDTH + x]) continue;
-      let e = x;
-      while (e + 1 < WIDTH && lcd.bits[y * WIDTH + e + 1]) e++;
-      ctx.fillRect(xs(x), y0, xs(e + 1) - xs(x), h);
-      x = e;
+
+  // device pixels per dot; draw at twice the next whole number of that, so the scale-down is always a
+  // reduction (never a blurry enlargement)
+  const k = Math.min(16, 2 * Math.max(1, Math.ceil(W / WIDTH)));
+  sharp ??= document.createElement('canvas');
+  if (sharp.width !== WIDTH * k || sharp.height !== HEIGHT * k) { sharp.width = WIDTH * k; sharp.height = HEIGHT * k; }
+  const s = sharp.getContext('2d');
+  s.clearRect(0, 0, sharp.width, sharp.height);
+  s.fillStyle = ink;
+  for (let level = 1; level <= BLACK; level++) {
+    s.globalAlpha = LEVEL_ALPHA[level];
+    for (let y = 0; y < HEIGHT; y++) {
+      for (let x = 0; x < WIDTH; x++) {
+        if (lcd.bits[y * WIDTH + x] !== level) continue;
+        let e = x;
+        while (e + 1 < WIDTH && lcd.bits[y * WIDTH + e + 1] === level) e++;
+        s.fillRect(x * k, y * k, (e + 1 - x) * k, k);
+        x = e;
+      }
     }
   }
+  s.globalAlpha = 1;
+
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(sharp, 0, 0, W, H);
 }

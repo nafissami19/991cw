@@ -5,6 +5,7 @@ import { formatReal, modelText } from '../../core/format.js';
 import { Editor } from '../../core/editor.js';
 import { h } from '../../ui/render.js';
 import { LINES } from '../../ui/lcd.js';
+import { HOME_CELLS, CELL_W, CELL_H } from '../../ui/homecells.js';
 import { Menu, closeMenus } from './menu.js';
 import { Message, Confirm, DigitPrompt, page, item } from './common.js';
 import { KEY_OF_VARIABLE } from '../keymap.js';
@@ -28,17 +29,6 @@ export const APPS = [
   { id: 'ratio', label: 'Ratio' },
   { id: 'mathbox', label: 'Math Box' },
 ];
-
-// small pictograms above the app names ('#' = dot)
-const PICT = {
-  calc: ['..#.......#..', '.###....###..', '..#..........', '..........#..', '#.#.....#####', '.#...........', '#.#.......#..'],
-  stat: ['#............', '#.........##.', '#.....##..##.', '#.##..##..##.', '#.##..##..##.', '#.##..##..##.', '#############'],
-  dist: ['.....###.....', '....#...#....', '...#.....#...', '..#.......#..', '.#.........#.', '#...........#', '#############'],
-  sheet: ['#############', '#...#...#...#', '#############', '#...#...#...#', '#############', '#...#...#...#', '#############'],
-  table: ['#############', '#.##.#.##.##.', '#############', '#..#.#..#.#..', '#..#.#..#.#..', '#..#.#..#.#..', '#############'],
-  mathbox: ['#######.......', '#.....#.#####.', '#.#...#.#...#.', '#..#..#.#.#.#.', '#...#.#.#...#.', '#.....#.#####.', '#######.......'],
-};
-const PICT_TEXT = { eqn: 'xy=0', ineq: 'xy>0', cmplx: 'a+bi', base: '2 8 16', matrix: '[::]', vector: '[ v ]', ratio: 'a:b' };
 
 /** Draws text with one pixel less spacing when it would not fit the 64-px cell. */
 function tightText(lcd, text, cx, base, font = 'S') {
@@ -89,29 +79,31 @@ class HomeScreen {
 
   view() { return { el: h('div', 'menu', h('div', 'item', APPS[this.sel].label)), status: { bare: true } }; }
 
-  /** Three apps per row, two rows on screen: a pictogram above each name, the selected name inverted. */
+  /**
+   * As on the CW: three apps per row in 64×32-dot cells, two rows on screen, the whole selected cell
+   * (icon and name) inverted with its corners rounded, a dark grey scroll bar at the right and no
+   * status line. The cells are CASIO's own icons and names (homecells.js).
+   */
   paint(lcd) {
     for (let k = 0; k < 6; k++) {
       const i = this.row * 3 + k;
       const app = APPS[i];
       if (!app) break;
-      const cx = 32 + (k % 3) * 64;
-      const top = Math.floor(k / 3) * 32;
-      const p = PICT[app.id];
-      if (p) lcd.bitmap(p, Math.round(cx - p[0].length / 2), top + 3);
-      else {
-        const txt = PICT_TEXT[app.id];
-        tightText(lcd, txt, cx, top + 10);
+      const x = (k % 3) * 64;
+      const y = Math.floor(k / 3) * 32;
+      const cell = HOME_CELLS[app.id];
+      if (cell) lcd.bitmap(cell, x, y);
+      else tightText(lcd, app.label, x + 30, y + 27);
+      lcd.note(app.label, x, y + 27);
+      if (i === this.sel) {
+        lcd.invert(x, y, CELL_W, CELL_H);
+        for (const [cx, cy] of [[0, 0], [CELL_W - 1, 0], [0, CELL_H - 1], [CELL_W - 1, CELL_H - 1]]) lcd.dot(x + cx, y + cy, 0);
       }
-      const { x0, w } = tightText(lcd, app.label, cx, top + 23);
-      if (i === this.sel) lcd.invert(Math.max(0, x0 - 2), top + 14, Math.min(w + 4, 192 - Math.max(0, x0 - 2)), 12);
     }
     const rows = Math.ceil(APPS.length / 3);
-    // scroll bar on the right edge
-    lcd.fill(191, 0, 1, 63);
     const t0 = Math.round((this.row * 63) / rows), t1 = Math.round(((this.row + 2) * 63) / rows);
-    lcd.fill(190, t0, 2, t1 - t0);
-    return { only: true, up: this.row > 0, down: this.row + 2 < rows };
+    for (let yy = t0; yy < t1; yy++) { lcd.shadeDot(190, yy, 2); lcd.shadeDot(191, yy, 2); }
+    return { bare: true };
   }
 }
 
