@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "emulator-nocache",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [".claude/serve.py", "8992"],
+      "port": 8992
+    }
+  ]
+}

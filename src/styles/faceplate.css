@@ -1,0 +1,202 @@
+/* fx-991CW faceplate, drawn flat at a 460Ã—960 design size and zoomed to fit the window.
+   Colours are sampled from the front view of the real calculator. */
+:root {
+  --page: #121314;
+  --body: #262628;
+  --body-top: #2f2f31;
+  --rim: #3b3b3c;
+  --bezel: #0b0b0c;
+  --glass-bg: #d0e6dc;
+  --key: #4a4b4b;
+  --key-hi: #575858;
+  --key-lo: #404141;
+  --sys: #323233;
+  --sys-hi: #3d3d3e;
+  --well: #141415;
+  --gold: #e3c473;
+  --shift-label: #d6ad62;
+  --label: #dadada;
+  --key-text: #ececec;
+  --font: Bahnschrift, "DIN Alternate", "DIN Condensed", "Segoe UI", Arial, sans-serif;
+  --math-font: "Cambria Math", Cambria, "Times New Roman", serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--page);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#stage { height: 100%; display: flex; align-items: flex-start; justify-content: center; }
+
+/* ---------------------------------------------------------- body */
+
+.calc {
+  position: relative;
+  width: 460px;
+  height: 960px;
+  border-radius: 46px 46px 34px 34px;
+  background: var(--rim);
+  box-shadow: inset 0 0 0 1px #4a4a4b;
+}
+/* a thin dark groove inside the rim, then the matte face */
+.calc::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 43px 43px 31px 31px;
+  background: #101011;
+}
+.calc::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 41px 41px 29px 29px;
+  background:
+    radial-gradient(140% 40% at 50% 0%, var(--body-top) 0%, transparent 70%),
+    linear-gradient(180deg, #2a2a2c 0%, var(--body) 30%, var(--body) 85%, #222224 100%);
+}
+.calc > * { position: absolute; z-index: 1; }
+
+/* clips for the slide cover on the top and bottom edges */
+.clip { width: 12px; height: 4px; background: #4a4a4b; border-radius: 1px; }
+
+/* ---------------------------------------------------------- brand, solar panel, display */
+
+.logo { left: 47px; top: 52px; color: #f2f2f2; font: 900 26.5px/1 "Arial Black", "Segoe UI Black", Arial, sans-serif; letter-spacing: .6px; transform: scaleY(.9); transform-origin: left top; }
+.model { left: 48px; top: 88px; color: #e4e4e4; font: 700 12.5px/1 var(--font); letter-spacing: .4px; }
+.solar {
+  left: 205px; top: 25px; width: 204px; height: 88px; border-radius: 8px;
+  background: linear-gradient(170deg, #3a2425 0%, #301e1f 45%, #2a1a1b 100%);
+  box-shadow: inset 0 0 0 1.5px #1a1010, 0 0 0 1px #3c3c3d;
+}
+
+.bezel { left: 31px; top: 132px; width: 395px; height: 188px; border-radius: 12px; background: var(--bezel); box-shadow: 0 0 0 1px #3a3a3b, inset 0 0 0 1px #1c1c1d; }
+.glass { left: 44px; top: 142px; width: 369px; height: 146px; border-radius: 4px; background: var(--glass-bg); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .35); }
+.glass > .lcd { position: absolute; left: 6px; top: 3px; }
+.series {
+  right: 55px; top: 300px; z-index: 2; color: #b9b9b9;
+  font: 400 12.5px/1 var(--font); font-stretch: 85%; letter-spacing: 6.4px; margin-right: -6.4px;
+}
+
+/* ---------------------------------------------------------- labels */
+
+.keypad { inset: 0; font-family: var(--font); }
+.keypad > * { position: absolute; }
+
+.labels {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font: 700 11px/1 var(--font);
+  font-stretch: 75%;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.labels.w { color: var(--label); letter-spacing: .5px; font-size: 11.5px; }
+.labels.y { color: var(--shift-label); letter-spacing: .5px; font-size: 11.5px; }
+.labels.s { color: var(--gold); font-size: 12px; font-weight: 600; }
+.labels sup { font-size: .72em; vertical-align: .5em; line-height: 0; margin-left: .5px; }
+.labels .it, .key .it { font-family: var(--math-font); font-style: italic; font-weight: 400; }
+.labels.s .it { font-size: 1.2em; }
+.labels .big { font-size: 16px; font-weight: 700; font-stretch: 100%; }
+.ico { display: inline-block; vertical-align: middle; overflow: visible; }
+.labels .ico { vertical-align: -.1em; }
+
+/* the small "L" that ties a SHIFT label to its key */
+.bracket { border-left: 1.3px solid var(--gold); border-bottom: 1.3px solid var(--gold); pointer-events: none; }
+
+/* ---------------------------------------------------------- keys */
+
+.key {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  color: var(--key-text);
+  font: 600 18px/1 var(--font);
+  font-stretch: 75%;
+  background: radial-gradient(circle at 50% 28%, var(--key-hi) 0%, var(--key) 55%, var(--key-lo) 100%);
+  box-shadow: 0 0 0 1.6px #0e0e0f, 0 2.5px 2px 1px rgba(0, 0, 0, .55), inset 0 1px 1px rgba(255, 255, 255, .10), inset 0 -2px 3px rgba(0, 0, 0, .25);
+}
+.key:active, .key.pressed {
+  filter: brightness(.8);
+  transform: translateY(1px);
+  box-shadow: 0 0 0 1.6px #0e0e0f, 0 1px 1px rgba(0, 0, 0, .55), inset 0 1px 2px rgba(0, 0, 0, .3);
+}
+
+/* system keys: darker, matte */
+.key.sys { background: radial-gradient(circle at 50% 30%, var(--sys-hi) 0%, var(--sys) 60%, #2a2a2b 100%); font-size: 21px; }
+.key.sys.on { background: radial-gradient(circle at 50% 35%, #2c2c2d, #202021); }
+.on-mark { width: 2px; height: 8px; background: #d8d8d8; border-radius: 1px; margin-bottom: 18px; }
+
+.pad-well { background: var(--well); border-radius: 30px; box-shadow: inset 0 1px 3px rgba(0, 0, 0, .8); }
+.key.pad .ico { font-size: 22px; }
+.key.pad.ok .ok-word { font: 700 19px/1 var(--font); font-stretch: 80%; color: #1c1c1d; -webkit-text-stroke: 1.2px #c9c9c9; letter-spacing: .5px; }
+
+.rocker { background: #0d0d0e; border-radius: 26px; }
+.key.rock { background: linear-gradient(180deg, #3a3a3b, var(--sys) 50%, #2d2d2e); font-size: 24px; box-shadow: none; }
+.key.rock.up { border-radius: 22px 22px 3px 3px; box-shadow: inset 0 1px 1px rgba(255, 255, 255, .08), 0 1px 0 #151516; }
+.key.rock.dn { border-radius: 3px 3px 22px 22px; box-shadow: inset 0 -1px 2px rgba(0, 0, 0, .35); }
+
+/* SHIFT: a champagne-gold key with a hollow up arrow */
+.key.shift {
+  color: #f6f0dc;
+  font-size: 24px;
+  background: radial-gradient(circle at 42% 30%, #fbf3dc 0%, #d9cfae 28%, #b4a984 62%, #8a7f5d 100%);
+}
+.key.shift .ico { stroke: #6a5f42; filter: drop-shadow(0 0 .5px rgba(255, 255, 255, .7)); }
+
+/* function keys and the top-row keys */
+.key.fn { font-size: 19px; }
+.key.fn .ico { font-size: 20px; }
+.key.fn .it { font-size: 1.45em; font-weight: 400; line-height: .6; }
+.key.top .ico { font-size: 21px; }
+.key[data-key="FUNCTION"] { font: 500 20px/1 var(--font); font-stretch: 100%; }
+.key[data-key="FUNCTION"] .fx-p { font-size: .8em; }
+.key[data-key="FUNCTION"] .it { font-size: 1.15em; }
+.key[data-key="LOG"] { font-size: 16px; letter-spacing: -.2px; }
+.key[data-key="LOG"] .ico { font-size: 16px; margin-left: 1px; }
+.key[data-key="ANS"] { font-size: 18px; }
+.key[data-key="SIN"], .key[data-key="COS"], .key[data-key="TAN"] { font-size: 20px; }
+.key[data-key="LP"], .key[data-key="RP"] { font: 500 22px/1 var(--font); padding-bottom: 2px; }
+
+/* number pad */
+.key.num { font: 400 32px/1 var(--font); font-stretch: 100%; }
+.key[data-key="AC"], .key[data-key="EXE"] { font: 600 27px/1 var(--font); font-stretch: 75%; }
+.key[data-key="DEL"] .ico { font-size: 27px; }
+.key[data-key="ADD"], .key[data-key="SUB"], .key[data-key="MUL"], .key[data-key="DIV"] { font: 400 36px/1 "Segoe UI", Arial, sans-serif; padding-bottom: 4px; }
+.key[data-key="DOT"] { font-size: 36px; padding-bottom: 12px; }
+.key[data-key="EXP"] { font: 500 22px/1 var(--font); font-stretch: 85%; align-items: center; }
+.key[data-key="EXP"] .ico { font-size: 22px; align-self: center; margin: -10px 0 0 1px; }
+.key.format { flex-direction: column; gap: 1px; }
+.key.format .fmt-word { font: 600 13px/1 var(--font); font-stretch: 75%; letter-spacing: -.1px; }
+.key.format .fmt-arc { font-size: 15px; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  max-width: 92%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #2b2d31;
+  color: #fff;
+  font: 14px "Segoe UI", sans-serif;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  z-index: 5;
+}
+.toast button { font: inherit; padding: 4px 10px; border-radius: 6px; border: none; background: #2d6fd8; color: #fff; cursor: pointer; }
+.toast[hidden] { display: none; }
